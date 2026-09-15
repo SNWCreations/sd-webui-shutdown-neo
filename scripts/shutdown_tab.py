@@ -11,7 +11,7 @@ from typing import Optional, Sequence
 
 import gradio as gr
 
-from modules import script_callbacks, shared
+from modules import restart, script_callbacks, shared
 
 
 logger = logging.getLogger(__name__)
@@ -97,19 +97,19 @@ def schedule_system_shutdown(command: Sequence[str]) -> None:
 
 
 def _run_webui_shutdown() -> None:
-    """Set NeoForge's stop signal after the UI response has been sent."""
-    shared.state.server_command = "stop"
+    """Terminate the WebUI process after the UI response has been sent."""
     logger.info("WebUI shutdown started from the Shutdown tab")
+    restart.stop_program()
 
 
 def schedule_webui_shutdown() -> None:
-    """Delay the WebUI stop signal so Gradio can return a success response first."""
+    """Delay process termination so Gradio can return a success response first."""
     timer = threading.Timer(SYSTEM_SHUTDOWN_DELAY_SECONDS, _run_webui_shutdown)
     timer.start()
 
 
 def request_webui_shutdown() -> str:
-    """Ask NeoForge's server loop to stop after this request completes."""
+    """Schedule WebUI process termination after this request completes."""
     schedule_webui_shutdown()
     logger.info("WebUI shutdown requested from the Shutdown tab")
     return "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now."

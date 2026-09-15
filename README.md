@@ -16,8 +16,9 @@ your SD WebUI NeoForge. A **Shutdown** tab will appear in the WebUI.
 
 ## Usage
 
-- **Shutdown WebUI** asks WebUI to stop through its normal `server_command` lifecycle
-  after a three-second delay, so the WebUI can return the success response first.
+- **Shutdown WebUI** terminates the WebUI process after a three-second delay, so the
+  WebUI can return the success response first. It uses the same process-stop mechanism
+  as the Extensions tab's **Apply changes and restart** action when a restart is unavailable.
 - **Shutdown system** requires an explicit confirmation checkbox and uses the native
   shutdown command for Windows, Linux, or macOS after a three-second delay. The delay
   lets the WebUI return the success response before the host begins shutting down.

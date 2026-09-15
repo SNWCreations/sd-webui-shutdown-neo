@@ -23,8 +23,12 @@ def load_shutdown_tab():
     callbacks = types.ModuleType("modules.script_callbacks")
     callbacks.on_ui_tabs = lambda callback: None
 
+    restart = types.ModuleType("modules.restart")
+    restart.stop_program = lambda: None
+
     state = types.SimpleNamespace(server_command=None)
     modules = types.ModuleType("modules")
+    modules.restart = restart
     modules.script_callbacks = callbacks
     modules.shared = types.SimpleNamespace(state=state)
 
@@ -36,6 +40,7 @@ def load_shutdown_tab():
         {
             "gradio": gradio,
             "modules": modules,
+            "modules.restart": restart,
             "modules.script_callbacks": callbacks,
         },
     ):
@@ -78,9 +83,11 @@ class ShutdownTabTests(unittest.TestCase):
         )
         schedule.assert_called_once_with()
 
-    def test_delayed_webui_shutdown_uses_neoforge_server_command(self):
-        self.extension._run_webui_shutdown()
-        self.assertEqual(self.extension.shared.state.server_command, "stop")
+    def test_delayed_webui_shutdown_stops_the_webui_process(self):
+        with patch.object(self.extension.restart, "stop_program") as stop_program:
+            self.extension._run_webui_shutdown()
+
+        stop_program.assert_called_once_with()
 
     def test_webui_shutdown_timer_waits_three_seconds(self):
         with patch.object(self.extension.threading, "Timer") as timer:

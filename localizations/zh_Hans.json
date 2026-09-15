@@ -1,0 +1,13 @@
+{
+  "Shutdown": "关闭",
+  "Status": "状态",
+  "Shutdown WebUI": "关闭 WebUI",
+  "System shutdown": "关闭系统",
+  "I understand this will immediately shut down the host system.": "我了解这会立即关闭主机系统。",
+  "Shutdown system": "关闭系统",
+  "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now.": "已请求关闭 WebUI，将在 3 秒后开始。现在可以安全关闭此窗口。",
+  "Confirm system shutdown before continuing.": "请先确认要关闭系统。",
+  "System shutdown is available only to direct local or LAN clients.": "只有直接从本机或局域网访问的客户端可以关闭系统。",
+  "System shutdown is not supported on this platform.": "此平台不支持关闭系统。",
+  "System shutdown requested. It will begin in 3 seconds. You can safely close this window now.": "已请求关闭系统，将在 3 秒后开始。现在可以安全关闭此窗口。"
+}

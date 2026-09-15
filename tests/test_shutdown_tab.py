@@ -174,10 +174,16 @@ class ShutdownTabTests(unittest.TestCase):
         schedule.assert_called_once_with()
 
     def test_delayed_webui_shutdown_stops_the_webui_process(self):
-        with patch.object(self.extension.restart, "stop_program") as stop_program:
+        with patch.object(self.extension.restart, "stop_program") as stop_program, patch(
+            "builtins.print"
+        ) as output:
             self.extension._run_webui_shutdown()
 
         stop_program.assert_called_once_with()
+        output.assert_called_once_with(
+            "[sd-webui-shutdown-neo] WebUI shutdown started from the Shutdown tab",
+            flush=True,
+        )
 
     def test_webui_shutdown_timer_waits_three_seconds(self):
         with patch.object(self.extension.threading, "Timer") as timer:
@@ -217,6 +223,18 @@ class ShutdownTabTests(unittest.TestCase):
             self.extension._run_system_shutdown(command)
 
         popen.assert_called_once_with(command, start_new_session=True)
+
+    def test_system_shutdown_error_is_written_to_stdout(self):
+        command = ("shutdown", "/s", "/t", "0")
+        with patch.object(
+            self.extension.subprocess, "Popen", side_effect=OSError("access denied")
+        ), patch("builtins.print") as output:
+            self.extension._run_system_shutdown(command)
+
+        output.assert_called_once_with(
+            "[sd-webui-shutdown-neo] Could not start system shutdown command: access denied",
+            flush=True,
+        )
 
     def test_system_shutdown_rejects_public_request_without_starting_process(self):
         request = FakeRequest("8.8.8.8")

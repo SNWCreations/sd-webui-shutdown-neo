@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ipaddress
 import json
-import logging
 import platform
 import subprocess
 import threading
@@ -15,9 +14,13 @@ import gradio as gr
 from modules import localization, restart, script_callbacks, shared
 
 
-logger = logging.getLogger(__name__)
 SYSTEM_SHUTDOWN_DELAY_SECONDS = 3.0
 LOCALIZATION_JS_PREFIX = "window.localization = "
+
+
+def write_stdout(message: str) -> None:
+    """Write extension status messages directly to the WebUI process output."""
+    print(f"[sd-webui-shutdown-neo] {message}", flush=True)
 
 
 def response_text(source_text: str) -> str:
@@ -91,8 +94,8 @@ def _run_system_shutdown(command: Sequence[str]) -> None:
     """Run the shutdown command after the UI response has been sent."""
     try:
         subprocess.Popen(command, start_new_session=True)
-    except OSError:
-        logger.exception("Could not start system shutdown command")
+    except OSError as error:
+        write_stdout(f"Could not start system shutdown command: {error}")
 
 
 def schedule_system_shutdown(command: Sequence[str]) -> None:
@@ -107,7 +110,7 @@ def schedule_system_shutdown(command: Sequence[str]) -> None:
 
 def _run_webui_shutdown() -> None:
     """Terminate the WebUI process after the UI response has been sent."""
-    logger.info("WebUI shutdown started from the Shutdown tab")
+    write_stdout("WebUI shutdown started from the Shutdown tab")
     restart.stop_program()
 
 
@@ -120,7 +123,7 @@ def schedule_webui_shutdown() -> None:
 def request_webui_shutdown() -> str:
     """Schedule WebUI process termination after this request completes."""
     schedule_webui_shutdown()
-    logger.info("WebUI shutdown requested from the Shutdown tab")
+    write_stdout("WebUI shutdown requested from the Shutdown tab")
     return response_text(
         "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now."
     )
@@ -132,7 +135,7 @@ def request_system_shutdown(confirmed: bool, request: gr.Request) -> str:
         return response_text("Confirm system shutdown before continuing.")
 
     if not is_system_shutdown_allowed(request):
-        logger.warning("Denied system shutdown request from %s", _client_host(request))
+        write_stdout(f"Denied system shutdown request from {_client_host(request)}")
         return response_text(
             "System shutdown is available only to direct local or LAN clients."
         )
@@ -143,7 +146,7 @@ def request_system_shutdown(confirmed: bool, request: gr.Request) -> str:
 
     schedule_system_shutdown(command)
 
-    logger.warning("System shutdown requested from %s", _client_host(request))
+    write_stdout(f"System shutdown requested from {_client_host(request)}")
     return response_text(
         "System shutdown requested. It will begin in 3 seconds. You can safely close this window now."
     )

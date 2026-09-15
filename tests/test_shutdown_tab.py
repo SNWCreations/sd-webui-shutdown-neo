@@ -26,11 +26,34 @@ def load_shutdown_tab():
     restart = types.ModuleType("modules.restart")
     restart.stop_program = lambda: None
 
+    localization = types.ModuleType("modules.localization")
+    localization.calls = []
+    localization.translations = {
+        "zh-Hans (Stable)": {
+            "System shutdown requested. It will begin in 3 seconds. You can safely close this window now.": "已请求关闭系统，将在 3 秒后开始。现在可以安全关闭此窗口。",
+        },
+        "zh_Hans": {
+            "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now.": "已请求关闭 WebUI，将在 3 秒后开始。现在可以安全关闭此窗口。",
+        },
+    }
+
+    def localization_js(profile):
+        localization.calls.append(profile)
+        return "window.localization = " + json.dumps(
+            localization.translations.get(profile, {})
+        )
+
+    localization.localization_js = localization_js
+
     state = types.SimpleNamespace(server_command=None)
     modules = types.ModuleType("modules")
+    modules.localization = localization
     modules.restart = restart
     modules.script_callbacks = callbacks
-    modules.shared = types.SimpleNamespace(state=state)
+    modules.shared = types.SimpleNamespace(
+        state=state,
+        opts=types.SimpleNamespace(localization="None"),
+    )
 
     spec = importlib.util.spec_from_file_location("shutdown_tab_under_test", SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
@@ -40,6 +63,7 @@ def load_shutdown_tab():
         {
             "gradio": gradio,
             "modules": modules,
+            "modules.localization": localization,
             "modules.restart": restart,
             "modules.script_callbacks": callbacks,
         },
@@ -59,6 +83,9 @@ class ShutdownTabTests(unittest.TestCase):
     def setUpClass(cls):
         cls.extension = load_shutdown_tab()
 
+    def setUp(self):
+        self.extension.shared.opts = types.SimpleNamespace(localization="None")
+
     def test_local_and_lan_addresses_are_allowed(self):
         for host in ("127.0.0.1", "::1", "192.168.1.20", "10.0.0.8", "fe80::1%12"):
             with self.subTest(host=host):
@@ -72,6 +99,37 @@ class ShutdownTabTests(unittest.TestCase):
     def test_forwarded_requests_are_rejected(self):
         request = FakeRequest("127.0.0.1", {"X-Forwarded-For": "203.0.113.5"})
         self.assertFalse(self.extension.is_system_shutdown_allowed(request))
+
+    def test_response_text_defaults_to_english(self):
+        self.assertEqual(
+            self.extension.response_text("Confirm system shutdown before continuing."),
+            "Confirm system shutdown before continuing.",
+        )
+        self.assertEqual(self.extension.localization.calls[-1], "None")
+
+    def test_response_text_uses_simplified_chinese_for_zh_hans_profile(self):
+        self.extension.shared.opts = types.SimpleNamespace(
+            localization="zh-Hans (Stable)"
+        )
+
+        self.assertEqual(
+            self.extension.response_text(
+                "System shutdown requested. It will begin in 3 seconds. You can safely close this window now."
+            ),
+            "已请求关闭系统，将在 3 秒后开始。现在可以安全关闭此窗口。",
+        )
+        self.assertEqual(self.extension.localization.calls[-1], "zh-Hans (Stable)")
+
+    def test_response_text_supports_underscore_zh_hans_profile(self):
+        self.extension.shared.opts = types.SimpleNamespace(localization="zh_Hans")
+
+        self.assertEqual(
+            self.extension.response_text(
+                "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now."
+            ),
+            "已请求关闭 WebUI，将在 3 秒后开始。现在可以安全关闭此窗口。",
+        )
+        self.assertEqual(self.extension.localization.calls[-1], "zh_Hans")
 
     def test_webui_shutdown_is_scheduled(self):
         with patch.object(self.extension, "schedule_webui_shutdown") as schedule:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import logging
 import platform
 import subprocess
@@ -11,11 +12,19 @@ from typing import Optional, Sequence
 
 import gradio as gr
 
-from modules import restart, script_callbacks, shared
+from modules import localization, restart, script_callbacks, shared
 
 
 logger = logging.getLogger(__name__)
 SYSTEM_SHUTDOWN_DELAY_SECONDS = 3.0
+LOCALIZATION_JS_PREFIX = "window.localization = "
+
+
+def response_text(source_text: str) -> str:
+    """Translate callback responses with NeoForge's active localization profile."""
+    localization_js = localization.localization_js(shared.opts.localization)
+    translations = json.loads(localization_js.removeprefix(LOCALIZATION_JS_PREFIX))
+    return translations.get(source_text, source_text)
 
 
 def _client_host(request: gr.Request) -> Optional[str]:
@@ -112,26 +121,32 @@ def request_webui_shutdown() -> str:
     """Schedule WebUI process termination after this request completes."""
     schedule_webui_shutdown()
     logger.info("WebUI shutdown requested from the Shutdown tab")
-    return "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now."
+    return response_text(
+        "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now."
+    )
 
 
 def request_system_shutdown(confirmed: bool, request: gr.Request) -> str:
     """Request an operating-system shutdown after local-network authorization."""
     if not confirmed:
-        return "Confirm system shutdown before continuing."
+        return response_text("Confirm system shutdown before continuing.")
 
     if not is_system_shutdown_allowed(request):
         logger.warning("Denied system shutdown request from %s", _client_host(request))
-        return "System shutdown is available only to direct local or LAN clients."
+        return response_text(
+            "System shutdown is available only to direct local or LAN clients."
+        )
 
     command = build_system_shutdown_command()
     if command is None:
-        return "System shutdown is not supported on this platform."
+        return response_text("System shutdown is not supported on this platform.")
 
     schedule_system_shutdown(command)
 
     logger.warning("System shutdown requested from %s", _client_host(request))
-    return "System shutdown requested. It will begin in 3 seconds. You can safely close this window now."
+    return response_text(
+        "System shutdown requested. It will begin in 3 seconds. You can safely close this window now."
+    )
 
 
 def on_ui_tabs():

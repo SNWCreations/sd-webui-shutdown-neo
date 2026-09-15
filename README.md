@@ -30,7 +30,7 @@ On Linux and macOS, that account must already be permitted to shut down the host
 
 The extension uses SD WebUI NeoForge's built-in localization system. English is the
 default. Simplified Chinese translations are included for the `zh-Hans (Stable)`, `zh-Hans
-(Testing)`, and `zh_Hans` localization profiles. Select one of these profiles in
+(Testing)`, their `[vladmandic]` variants, and `zh_Hans` localization profiles. Select one of these profiles in
 **Settings > User interface > Localization**, then apply settings and reload the UI.
 The status messages returned after pressing a shutdown button use the same selected
 profile and its NeoForge localization dictionary.

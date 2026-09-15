@@ -35,6 +35,9 @@ def load_shutdown_tab():
         "zh_Hans": {
             "WebUI shutdown requested. It will begin in 3 seconds. You can safely close this window now.": "已请求关闭 WebUI，将在 3 秒后开始。现在可以安全关闭此窗口。",
         },
+        "zh-Hans (Testing) [vladmandic]": {
+            "Confirm system shutdown before continuing.": "请先确认要关闭系统。",
+        },
     }
 
     def localization_js(profile):
@@ -130,6 +133,35 @@ class ShutdownTabTests(unittest.TestCase):
             "已请求关闭 WebUI，将在 3 秒后开始。现在可以安全关闭此窗口。",
         )
         self.assertEqual(self.extension.localization.calls[-1], "zh_Hans")
+
+    def test_response_text_supports_vladmandic_profile_name(self):
+        self.extension.shared.opts = types.SimpleNamespace(
+            localization="zh-Hans (Testing) [vladmandic]"
+        )
+
+        self.assertEqual(
+            self.extension.response_text("Confirm system shutdown before continuing."),
+            "请先确认要关闭系统。",
+        )
+        self.assertEqual(
+            self.extension.localization.calls[-1], "zh-Hans (Testing) [vladmandic]"
+        )
+
+    def test_simplified_chinese_profile_files_include_dynamic_response_text(self):
+        source_text = "System shutdown requested. It will begin in 3 seconds. You can safely close this window now."
+        for filename in (
+            "zh_Hans.json",
+            "zh-Hans (Stable).json",
+            "zh-Hans (Testing).json",
+            "zh-Hans (Stable) [vladmandic].json",
+            "zh-Hans (Testing) [vladmandic].json",
+        ):
+            with self.subTest(filename=filename):
+                with (LOCALIZATIONS_PATH / filename).open(encoding="utf-8") as file:
+                    self.assertEqual(
+                        json.load(file)[source_text],
+                        "已请求关闭系统，将在 3 秒后开始。现在可以安全关闭此窗口。",
+                    )
 
     def test_webui_shutdown_is_scheduled(self):
         with patch.object(self.extension, "schedule_webui_shutdown") as schedule:
